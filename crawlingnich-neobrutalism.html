@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CrawlingNich — Dashboard Beta Crawling</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  /* ===== Tokens matched to neobrutalism.dev default theme ===== */
+  :root{
+    --background:#FEF2E8;          /* page bg, cream */
+    --secondary-background:#FFFFFF;/* card/content bg */
+    --foreground:#000000;
+    --main-foreground:#000000;
+    --main:#88AAEE;                /* signature periwinkle */
+    --border:#000000;
+    --text-muted:#6b6354;
+    --yellow:#FFD66B;
+    --pink:#FFB3CB;
+    --green:#7BE3A0;
+    --danger:#FF6B6B;
+    --radius-base:10px;
+    --bw:2px;                      /* border-2, used everywhere */
+    --shadow: 4px 4px 0px 0px var(--border);
+    /* Semantic Colors */
+    --input-bg: #FBF6EC;
+    --thumb-bg: #EDE6D2;
+    --skeleton-start: #EDE6D2;
+    --skeleton-mid: #F8F2E3;
+    --text-body: #3c382f;
+    --footnote-border: #c9bfa3;
+    --text-berita: #3454C8;
+    --text-jurnal: #C23E78;
+    --text-video: #059669;
+  }
+
+  :root.dark {
+    --background: #09090b;
+    --secondary-background: #18181b;
+    --foreground: #fafafa;
+    --border: #3f3f46;
+    --text-muted: #a1a1aa;
+    --input-bg: #27272a;
+    --thumb-bg: #27272a;
+    --skeleton-start: #27272a;
+    --skeleton-mid: #3f3f46;
+    --text-body: #d4d4d8;
+    --footnote-border: #3f3f46;
+    --shadow: 4px 4px 0px 0px #a78bfa;
+    --text-berita: #a78bfa;
+    --text-jurnal: #f472b6;
+    --text-video: #4ade80;
+    --main: #a78bfa;
+    --yellow: #facc15;
+    --pink: #f472b6;
+    --green: #4ade80;
+  }
+
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--background);
+    background-image:radial-gradient(circle at 1px 1px, rgba(0,0,0,0.07) 1px, transparent 0);
+    background-size:22px 22px;
+    color:var(--foreground);
+    font-family:'Inter',sans-serif;
+    min-height:100vh;
+  }
+  h1,h2,h3,.heading{font-family:'Space Grotesk',sans-serif;}
+  .mono{font-family:'JetBrains Mono',monospace;}
+  button{font-family:inherit;cursor:pointer;}
+  input{font-family:inherit;}
+  img{display:block;max-width:100%;}
+
+  /* press interaction shared by every clickable surface (matches Button "default" variant) */
+  .pressable{transition:all .2s cubic-bezier(0.34, 1.56, 0.64, 1);}
+  .pressable:hover{transform:translate(-3px,-3px);box-shadow: 7px 7px 0px 0px var(--border);}
+  .pressable:active{transform:translate(4px,4px);box-shadow:none;}
+
+  /* ---------- Top bar ---------- */
+  .topbar{
+    display:flex;align-items:center;justify-content:space-between;gap:16px;
+    padding:14px 22px;background:var(--secondary-background);
+    border-bottom:var(--bw) solid var(--border);
+    position:sticky;top:0;z-index:40;flex-wrap:wrap;
+  }
+  .brand{display:flex;align-items:center;gap:12px;}
+  .brand-mark{
+    width:42px;height:42px;border:var(--bw) solid var(--border);
+    border-radius:var(--radius-base);background:var(--yellow);
+    display:flex;align-items:center;justify-content:center;
+    box-shadow:var(--shadow);flex-shrink:0;
+  }
+  .brand-text h1{font-size:19px;font-weight:800;margin:0;letter-spacing:-0.02em;line-height:1.1;}
+  .brand-text span{font-size:12px;color:var(--text-muted);font-weight:500;}
+
+  .engine-status{
+    display:flex;align-items:center;gap:10px;
+    border:var(--bw) solid var(--border);border-radius:999px;
+    padding:7px 14px 7px 10px;background:var(--secondary-background);
+    box-shadow:var(--shadow);
+  }
+  .dot{width:10px;height:10px;border-radius:50%;background:var(--green);border:1.5px solid var(--border);animation:pulse 1.6s infinite;}
+  .engine-status.busy .dot{background:var(--yellow);}
+  @keyframes pulse{
+    0%{box-shadow:0 0 0 0 rgba(123,227,160,.6);}
+    70%{box-shadow:0 0 0 7px rgba(123,227,160,0);}
+    100%{box-shadow:0 0 0 0 rgba(123,227,160,0);}
+  }
+  .engine-status span{font-size:12px;font-weight:700;letter-spacing:.04em;}
+
+  .mobile-filter-btn{display:none;}
+
+  /* ---------- Layout ---------- */
+  .layout{max-width:1520px;margin:0 auto;display:grid;grid-template-columns:300px 1fr 360px;gap:20px;padding:20px;align-items:start;}
+
+  .panel{background:var(--secondary-background);border:var(--bw) solid var(--border);border-radius:var(--radius-base);box-shadow:var(--shadow);}
+
+  /* ---------- Sidebar ---------- */
+  .sidebar{position:sticky;top:90px;display:flex;flex-direction:column;gap:16px;}
+  .kw-block{padding:14px;}
+  .kw-block label{display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;color:var(--text-muted);}
+  .chip-input{
+    display:flex;flex-wrap:wrap;gap:6px;align-items:center;
+    border:var(--bw) solid var(--border);border-radius:var(--radius-base);
+    padding:8px;background:var(--input-bg);min-height:42px;
+  }
+  .chip-input input{border:none;background:transparent;outline:none;flex:1;min-width:90px;font-size:13px;padding:3px;color:var(--foreground);}
+  .chip-input input::placeholder{color:var(--text-muted);}
+  .chip{
+    display:flex;align-items:center;gap:6px;background:var(--main);color:var(--main-foreground);
+    border:var(--bw) solid var(--border);border-radius:6px;padding:3px 6px 3px 9px;font-size:12px;font-weight:700;
+  }
+  .chip button{border:none;background:rgba(0,0,0,.15);color:inherit;width:16px;height:16px;border-radius:50%;font-size:11px;line-height:1;display:flex;align-items:center;justify-content:center;}
+
+  /* ---------- Accordion (matches neobrutalism.dev accordion.json) ---------- */
+  .accordion-item{border:var(--bw) solid var(--border);border-radius:var(--radius-base);overflow:hidden;box-shadow:var(--shadow);background:var(--secondary-background);}
+  .accordion-trigger{
+    width:100%;display:flex;align-items:center;justify-content:space-between;
+    background:var(--main);color:var(--main-foreground);border:none;padding:13px 14px;
+    font-weight:700;font-size:14px;text-align:left;font-family:'Space Grotesk',sans-serif;
+  }
+  .accordion-trigger svg{transition:transform .2s ease;flex-shrink:0;}
+  .accordion-item.open .accordion-trigger{border-bottom:var(--bw) solid var(--border);}
+  .accordion-item.open .accordion-trigger svg{transform:rotate(180deg);}
+  .accordion-content{background:var(--secondary-background);max-height:0;overflow:hidden;transition:max-height .22s ease;}
+  .accordion-item.open .accordion-content{max-height:420px;}
+  .accordion-content-inner{padding:14px;display:flex;flex-direction:column;gap:10px;}
+
+  .check-row{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:13px;font-weight:600;}
+  .check-row label{display:flex;align-items:center;gap:9px;cursor:pointer;}
+  /* checkbox: square, sharp corners, outline -> matches checkbox.json (size-4 outline-2 outline-border) */
+  .check-box{
+    width:17px;height:17px;border:var(--bw) solid var(--border);
+    background:var(--secondary-background);flex-shrink:0;
+    display:inline-flex;align-items:center;justify-content:center;position:relative;
+  }
+  input[type=checkbox]{position:absolute;opacity:0;width:17px;height:17px;cursor:pointer;}
+  input[type=checkbox]:checked + .check-box{background:var(--main);}
+  input[type=checkbox]:checked + .check-box::after{
+    content:"";width:8px;height:5px;border-left:2.5px solid var(--main-foreground);
+    border-bottom:2.5px solid var(--main-foreground);transform:rotate(-45deg) translate(0,-1px);
+  }
+  /* count badge: matches badgeVariants "neutral" -> bg-secondary-background border-2 */
+  .count-badge{
+    font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;
+    background:var(--secondary-background);border:var(--bw) solid var(--border);
+    border-radius:var(--radius-base);padding:2px 7px;min-width:26px;text-align:center;
+  }
+
+  .date-row{display:flex;gap:8px;}
+  .date-row input{flex:1;border:var(--bw) solid var(--border);border-radius:var(--radius-base);padding:7px 8px;font-size:12px;background:var(--secondary-background);width:100%;color:var(--foreground);}
+  .date-meta{display:flex;align-items:center;justify-content:space-between;font-size:11px;color:var(--text-muted);}
+  .date-meta button{background:none;border:none;color:var(--danger);font-weight:700;text-decoration:underline;font-size:11px;padding:0;}
+  .date-placeholder{font-size:11.5px;color:var(--text-muted);font-style:italic;}
+
+  .btn-cta{
+    width:100%;border:var(--bw) solid var(--border);border-radius:var(--radius-base);
+    background:var(--yellow);color:var(--main-foreground);font-weight:800;font-size:15px;font-family:'Space Grotesk',sans-serif;
+    padding:14px;box-shadow:var(--shadow);display:flex;align-items:center;justify-content:center;gap:8px;
+  }
+  .btn-cta:disabled{opacity:.7;cursor:not-allowed;transform:none !important;box-shadow:var(--shadow) !important;}
+  .btn-cta .spinner{width:14px;height:14px;border:2.5px solid var(--border);border-top-color:transparent;border-radius:50%;animation:spin .6s linear infinite;display:none;}
+  .btn-cta.loading .spinner{display:inline-block;}
+  .btn-cta.loading .cta-label{opacity:.8;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+
+  /* ---------- Results / center column ---------- */
+  .btn-download{
+    background:var(--main);color:var(--main-foreground);font-weight:800;font-size:13px;font-family:'Space Grotesk',sans-serif;
+    padding:10px 16px;border:var(--bw) solid var(--border);border-radius:var(--radius-base);box-shadow:var(--shadow);
+    display:flex;align-items:center;gap:6px;white-space:nowrap;
+  }
+  .btn-download:disabled{opacity:.5;cursor:not-allowed;box-shadow:none;transform:none;}
+  .results{display:flex;flex-direction:column;gap:14px;min-width:0;}
+  .stats-header-wrap{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;}
+  .stats-bar{display:flex;gap:10px;flex-wrap:wrap;flex:1;}
+  .stat-pill{flex:1;min-width:110px;border:var(--bw) solid var(--border);border-radius:var(--radius-base);background:var(--secondary-background);padding:10px 14px;box-shadow:var(--shadow);}
+  .stat-pill b{display:block;font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:700;line-height:1.1;}
+  .stat-pill span{font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em;}
+  .stat-pill.total b{color:var(--foreground);}
+  .stat-pill.berita b{color:var(--text-berita);}
+  .stat-pill.jurnal b{color:var(--text-jurnal);}
+  .stat-pill.video b{color:var(--text-video);}
+
+  /* gallery grid so scraped thumbnails get maximum visual real estate */
+  .results-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:16px;}
+  .empty-state{grid-column:1/-1;border:var(--bw) dashed var(--border);border-radius:var(--radius-base);padding:36px 20px;text-align:center;background:var(--secondary-background);}
+  .empty-state .spider{font-size:30px;display:block;margin-bottom:8px;}
+  .empty-state h3{margin:0 0 6px;font-size:16px;}
+  .empty-state p{margin:0;font-size:13px;color:var(--text-muted);}
+
+  /* image-card pattern: figure > thumb (top) + figcaption (bottom), matches image-card.json */
+  .result-card{
+    border:var(--bw) solid var(--border);border-radius:var(--radius-base);
+    background:var(--secondary-background);box-shadow:var(--shadow);
+    overflow:hidden;cursor:pointer;display:flex;flex-direction:column;
+    transition:transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), border-color 0.2s ease;
+  }
+  .result-card:hover{
+    transform:translate(-4px,-4px);
+    box-shadow: 8px 8px 0px 0px var(--border);
+  }
+  html.dark .result-card:hover{
+    box-shadow: 8px 8px 0px 0px #a78bfa;
+    border-color: #a78bfa;
+  }
+  .result-card.active{box-shadow:4px 4px 0px 0px var(--main); border-color:var(--main);}
+  .thumb-wrap{position:relative;aspect-ratio:4/3;background:var(--thumb-bg);border-bottom:var(--bw) solid var(--border);overflow:hidden;}
+  .thumb-wrap img{width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .35s ease;position:relative;z-index:1;}
+  .thumb-wrap img.loaded{opacity:1;}
+  .skeleton{position:absolute;inset:0;background:linear-gradient(100deg,var(--skeleton-start) 30%,var(--skeleton-mid) 50%,var(--skeleton-start) 70%);background-size:200% 100%;animation:shimmer 1.3s ease-in-out infinite;}
+  .thumb-wrap img.loaded ~ .skeleton{display:none;}
+  @keyframes shimmer{0%{background-position:200% 0;}100%{background-position:-200% 0;}}
+  .thumb-scrap-tag{
+    position:absolute;bottom:6px;left:6px;z-index:2;font-family:'JetBrains Mono',monospace;
+    font-size:9.5px;font-weight:700;background:var(--secondary-background);border:1.5px solid var(--border);
+    border-radius:5px;padding:2px 6px;letter-spacing:.03em;
+  }
+  .result-card-body{padding:12px 14px 14px;display:flex;flex-direction:column;gap:6px;flex:1;}
+  .tag{display:inline-block;font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;padding:3px 9px;border:var(--bw) solid var(--border);border-radius:var(--radius-base);width:fit-content;}
+  .tag.berita{background:var(--main);color:var(--main-foreground);}
+  .tag.jurnal{background:var(--pink);color:var(--main-foreground);}
+  .tag.video{background:var(--green);color:var(--main-foreground);}
+  .result-card h3{font-size:14.5px;margin:2px 0 0;line-height:1.35;}
+  .result-meta{font-size:11px;color:var(--text-muted);font-family:'JetBrains Mono',monospace;}
+  .result-card p{font-size:12.5px;color:var(--text-body);margin:0;line-height:1.5;}
+
+  /* ---------- Preview panel ---------- */
+  .preview-panel{position:sticky;top:90px;padding:0;max-height:calc(100vh - 110px);overflow-y:auto;}
+  .preview-panel h2{font-size:15px;margin:0;padding:16px 16px 0;display:flex;align-items:center;justify-content:space-between;}
+  .preview-close{display:none;background:none;border:none;font-size:18px;line-height:1;}
+  .preview-empty{font-size:13px;color:var(--text-muted);line-height:1.6;padding:0 16px 16px;}
+  .preview-empty .ph-title{font-size:20px;font-weight:800;color:var(--foreground);margin:14px 0 4px;}
+  .preview-hero{aspect-ratio:16/9;background:var(--thumb-bg);border-top:var(--bw) solid var(--border);border-bottom:var(--bw) solid var(--border);position:relative;overflow:hidden;margin-top:14px;}
+  .preview-hero img{width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .35s ease;position:relative;z-index:1;}
+  .preview-hero img.loaded{opacity:1;}
+  .preview-body{padding:16px;}
+  .preview-body .tag{margin-bottom:10px;}
+  .preview-body h3{font-size:17px;margin:0 0 8px;line-height:1.35;}
+  .preview-meta{font-size:12px;color:var(--text-muted);font-family:'JetBrains Mono',monospace;margin-bottom:12px;}
+  .preview-divider{height:var(--bw);background:var(--border);margin:12px 0;}
+  .preview-body p{font-size:13.5px;line-height:1.65;color:var(--text-body);margin:0 0 16px;}
+  .btn-secondary{
+    display:inline-flex;align-items:center;gap:6px;border:var(--bw) solid var(--border);border-radius:var(--radius-base);
+    background:var(--secondary-background);padding:9px 14px;font-weight:700;font-size:13px;
+    box-shadow:var(--shadow);text-decoration:none;color:var(--foreground);
+  }
+  .preview-footnote{margin:0 16px 16px;font-size:11px;color:var(--text-muted);font-style:italic;line-height:1.5;border-top:1.5px dashed var(--footnote-border);padding-top:10px;}
+
+  .backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:50;}
+
+  /* ---------- Responsive ---------- */
+  @media (max-width:1080px){
+    .layout{grid-template-columns:280px 1fr;}
+    .preview-panel{position:fixed;top:auto;bottom:0;left:0;right:0;max-height:80vh;border-radius:var(--radius-base) var(--radius-base) 0 0;z-index:60;transform:translateY(110%);transition:transform .25s ease;}
+    .preview-panel.open{transform:translateY(0);}
+    .preview-close{display:block;}
+    .backdrop.show{display:block;}
+  }
+  @media (max-width:740px){
+    .layout{grid-template-columns:1fr;padding:14px;gap:14px;}
+    .results-list{grid-template-columns:repeat(auto-fill,minmax(200px,1fr));}
+    .mobile-filter-btn{display:flex;align-items:center;gap:6px;border:var(--bw) solid var(--border);border-radius:var(--radius-base);background:var(--yellow);color:var(--main-foreground);padding:8px 12px;font-weight:700;font-size:12px;box-shadow:var(--shadow);}
+    .sidebar{position:fixed;top:0;left:0;bottom:0;width:84%;max-width:320px;z-index:70;background:var(--background);padding:16px;overflow-y:auto;transform:translateX(-105%);transition:transform .25s ease;border-right:var(--bw) solid var(--border);}
+    .sidebar.open{transform:translateX(0);}
+    .sidebar-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:65;}
+    .sidebar-backdrop.show{display:block;}
+    .sidebar-close{display:flex !important;}
+  }
+  .sidebar-close{display:none;align-self:flex-end;background:none;border:var(--bw) solid var(--border);border-radius:var(--radius-base);padding:4px 9px;font-weight:700;margin-bottom:-4px;}
+
+  /* ---------- Progress (Neobrutalism) ---------- */
+  .progress-root {
+    position: relative;
+    height: 16px;
+    width: 100%;
+    overflow: hidden;
+    border-radius: var(--radius-base);
+    border: var(--bw) solid var(--border);
+    background-color: var(--secondary-background);
+    display: none;
+    margin-bottom: 16px;
+    box-shadow: 2px 2px 0px 0px var(--border);
+  }
+  .progress-root.show {
+    display: block;
+  }
+  .progress-indicator {
+    height: 100%;
+    width: 100%;
+    flex: 1;
+    border-right: var(--bw) solid var(--border);
+    background-color: var(--main);
+    transition: transform 0.2s ease-out;
+    transform: translateX(-100%);
+  }
+
+  /* ---------- Switch (Neobrutalism) ---------- */
+  .theme-switch {
+    display: inline-flex;
+    height: 24px;
+    width: 48px;
+    flex-shrink: 0;
+    cursor: pointer;
+    align-items: center;
+    border-radius: 9999px;
+    border: var(--bw) solid var(--border);
+    background-color: var(--secondary-background);
+    transition: background-color 0.2s;
+    position: relative;
+    padding: 0;
+  }
+  .theme-switch.checked {
+    background-color: var(--main);
+  }
+  .theme-switch-thumb {
+    pointer-events: none;
+    display: block;
+    height: 16px;
+    width: 16px;
+    border-radius: 9999px;
+    background-color: #fff;
+    border: var(--bw) solid var(--border);
+    transition: transform 0.2s;
+    transform: translateX(4px); /* unchecked */
+  }
+  .theme-switch.checked .theme-switch-thumb {
+    transform: translateX(24px); /* checked */
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <button class="mobile-filter-btn pressable" id="openSidebarBtn">☰ Filter</button>
+    <div class="brand-mark">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+        <circle cx="12" cy="12" r="2.4" fill="var(--border)"/>
+        <g stroke="var(--border)" stroke-width="1.4">
+          <line x1="12" y1="2" x2="12" y2="22"/>
+          <line x1="2" y1="12" x2="22" y2="12"/>
+          <line x1="5" y1="5" x2="19" y2="19"/>
+          <line x1="19" y1="5" x2="5" y2="19"/>
+          <circle cx="12" cy="12" r="6.2" fill="none"/>
+        </g>
+      </svg>
+    </div>
+    <div class="brand-text">
+      <h1>CrawlingNich</h1>
+      <span>Dashboard Beta Crawling</span>
+    </div>
+  </div>
+  <div style="display:flex; align-items:center; gap:16px;">
+    <!-- Theme Switch -->
+    <div style="display:flex; align-items:center; gap:8px;">
+      <span style="font-size:12px; font-weight:700;">Dark</span>
+      <button class="theme-switch" id="themeSwitch" aria-label="Toggle Dark Mode">
+        <span class="theme-switch-thumb"></span>
+      </button>
+    </div>
+
+    <div class="engine-status" id="engineStatus">
+      <span class="dot"></span>
+      <span class="mono" id="engineLabel">ENGINE READY</span>
+    </div>
+  </div>
+</header>
+
+<div class="backdrop" id="previewBackdrop"></div>
+<div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <button class="sidebar-close" id="closeSidebarBtn">Tutup ✕</button>
+
+    <div class="panel kw-block">
+      <label>Primary Keyword</label>
+      <div class="chip-input" id="kwPrimaryWrap">
+        <input type="text" id="kwPrimaryInput" placeholder="klik enter untuk memasukan keyword">
+      </div>
+    </div>
+
+    <div class="panel kw-block">
+      <label>Secondary Keyword</label>
+      <div class="chip-input" id="kwSecondaryWrap">
+        <input type="text" id="kwSecondaryInput" placeholder="klik enter untuk memasukan keyword">
+      </div>
+    </div>
+
+    <!-- Accordion: Tipe Konten -->
+    <div class="accordion-item open" data-accordion>
+      <button class="accordion-trigger">
+        Tipe Konten
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+      <div class="accordion-content">
+        <div class="accordion-content-inner">
+          <div class="check-row">
+            <label><input type="checkbox" id="filterSemua" checked><span class="check-box"></span>Semua</label>
+            <span class="count-badge" id="countSemua">0</span>
+          </div>
+          <div class="check-row">
+            <label><input type="checkbox" class="type-filter" data-type="berita" checked><span class="check-box"></span>Berita</label>
+            <span class="count-badge" id="countBerita">0</span>
+          </div>
+          <div class="check-row">
+            <label><input type="checkbox" class="type-filter" data-type="jurnal" checked><span class="check-box"></span>Jurnal</label>
+            <span class="count-badge" id="countJurnal">0</span>
+          </div>
+          <div class="check-row">
+            <label><input type="checkbox" class="type-filter" data-type="video" checked><span class="check-box"></span>Video</label>
+            <span class="count-badge" id="countVideo">0</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Accordion: Filter Tanggal -->
+    <div class="accordion-item" data-accordion>
+      <button class="accordion-trigger">
+        Filter Tanggal
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+      <div class="accordion-content">
+        <div class="accordion-content-inner">
+          <div class="date-meta"><span>Between</span><button id="clearDateBtn">clear</button></div>
+          <div class="date-row">
+            <input type="date" id="dateStart">
+            <input type="date" id="dateEnd">
+          </div>
+          <div class="date-placeholder" id="datePlaceholder">— pilih rentang tanggal —</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="progress-root" id="crawlProgressRoot">
+      <div class="progress-indicator" id="crawlProgressIndicator"></div>
+    </div>
+
+    <button class="btn-cta pressable" id="crawlBtn">
+      <span class="spinner"></span>
+      <span class="cta-label" id="crawlLabel">Mulai Crawling</span>
+    </button>
+  </aside>
+
+  <!-- RESULTS -->
+  <main class="results">
+    <div class="stats-header-wrap">
+      <div class="stats-bar">
+        <div class="stat-pill total"><b id="statTotal">0</b><span>total hasil</span></div>
+        <div class="stat-pill berita"><b id="statBerita">0</b><span>berita</span></div>
+        <div class="stat-pill jurnal"><b id="statJurnal">0</b><span>jurnal</span></div>
+        <div class="stat-pill video"><b id="statVideo">0</b><span>video</span></div>
+      </div>
+      <button class="btn-download pressable" id="downloadBtn" disabled title="Shortcut: Ctrl+J (Win/Linux) atau Cmd+Option+L (Mac)">
+        ⬇️ Unduh Data (Ctrl+J)
+      </button>
+    </div>
+
+    <div class="results-list" id="resultsList">
+      <div class="empty-state" id="emptyState">
+        <span class="spider">🕸️</span>
+        <h3>Belum ada hasil</h3>
+        <p>Masukkan keyword lalu klik "Mulai Crawling" untuk mulai mengambil data.</p>
+      </div>
+    </div>
+  </main>
+
+  <!-- PREVIEW -->
+  <aside class="panel preview-panel" id="previewPanel">
+    <h2>Preview Berita <button class="preview-close" id="closePreviewBtn">✕</button></h2>
+    <div id="previewEmpty" class="preview-empty">
+      <p>Klik area kartu berita di tengah untuk melihat preview di panel kanan. Tombol "Buka berita" tetap membuka tab baru.</p>
+      <div class="ph-title">-</div>
+      <p style="margin-top:4px;">- · - · -</p>
+    </div>
+    <div id="previewBody" class="preview-body" style="display:none;"></div>
+    <div class="preview-footnote">
+      Preview memakai server lokal/API untuk membaca artikel. Kalau sumbernya terlalu ketat, gunakan tombol "Buka berita asli".
+    </div>
+  </aside>
+
+</div>
+
+<script>
+// ---------- Mock dataset (demo only, no real crawling backend) ----------
+// "img" pakai foto placeholder beresolusi tinggi untuk mensimulasikan thumbnail hasil scraping.
+const MOCK_DATA = [
+  {type:'berita', seed:'ai-edu-26', title:'Adopsi AI di Sektor Pendidikan Disebut Meningkat Tahun Ini', source:'contoh-media.id', date:'18 Jun 2026', snippet:'Sejumlah sekolah mulai mengintegrasikan asisten belajar berbasis AI ke kurikulum harian.', content:'Laporan ini membahas bagaimana institusi pendidikan mengadopsi perangkat berbasis kecerdasan buatan untuk mendukung proses belajar siswa, mulai dari evaluasi otomatis hingga rekomendasi materi yang dipersonalisasi.'},
+  {type:'jurnal', seed:'labor-auto-12', title:'Dampak Otomatisasi terhadap Struktur Pasar Kerja Digital', source:'Jurnal Ekonomi Digital, Vol. 12', date:'02 Jun 2026', snippet:'Studi ini menelaah pergeseran jenis pekerjaan akibat otomatisasi proses berbasis algoritma.', content:'Penelitian ini menggunakan data ketenagakerjaan lima tahun terakhir untuk memetakan pergeseran permintaan keterampilan akibat adopsi otomatisasi pada sektor jasa dan manufaktur ringan.'},
+  {type:'berita', seed:'startup-monitor-7', title:'Startup Lokal Luncurkan Layanan Pemantauan Berita Otomatis', source:'kabar-teknologi.co', date:'15 Jun 2026', snippet:'Layanan baru ini menargetkan tim riset dan media yang butuh pemantauan isu secara real-time.', content:'Produk ini dirancang untuk membantu tim riset memantau perkembangan isu tertentu lintas sumber berita secara otomatis, lengkap dengan ringkasan harian.'},
+  {type:'jurnal', seed:'nlp-id-9', title:'Evaluasi Akurasi Model Klasifikasi Teks Berbahasa Indonesia', source:'Jurnal Ilmu Komputer, Vol. 9', date:'29 Mei 2026', snippet:'Perbandingan beberapa pendekatan klasifikasi teks pada korpus berita berbahasa Indonesia.', content:'Studi ini membandingkan beberapa pendekatan pemrosesan bahasa alami pada korpus berita domestik, dengan fokus pada akurasi klasifikasi topik dan ketahanan terhadap variasi gaya tulisan.'},
+  {type:'berita', seed:'renewable-energy-10', title:'Riset: Minat Publik pada Topik Energi Terbarukan Terus Naik', source:'media-harian.net', date:'10 Jun 2026', snippet:'Tren pencarian publik menunjukkan kenaikan minat terhadap energi bersih sejak awal tahun.', content:'Data agregat menunjukkan tren kenaikan perhatian publik terhadap isu energi terbarukan, didorong oleh pemberitaan kebijakan dan proyek infrastruktur baru.'},
+  {type:'jurnal', seed:'migration-skill-5', title:'Kajian Pola Migrasi Tenaga Kerja Terampil Antar Provinsi', source:'Jurnal Kependudukan, Vol. 5', date:'21 Mei 2026', snippet:'Penelitian memetakan arus perpindahan tenaga kerja terampil dalam lima tahun terakhir.', content:'Penelitian ini memetakan arus migrasi tenaga kerja terampil antarwilayah serta faktor pendorong utamanya, termasuk ketersediaan lapangan kerja dan akses infrastruktur.'},
+  {type:'berita', seed:'govapp-report-5', title:'Pemerintah Daerah Uji Coba Sistem Pelaporan Warga Berbasis Aplikasi', source:'lokal-update.id', date:'05 Jun 2026', snippet:'Uji coba dilakukan di beberapa kecamatan sebelum diperluas ke wilayah lain.', content:'Sistem ini memungkinkan warga melaporkan masalah infrastruktur secara langsung melalui aplikasi, dengan status penanganan yang dapat dipantau publik.'},
+  {type:'jurnal', seed:'elearning-review-14', title:'Tinjauan Literatur: Efektivitas Pembelajaran Daring Lanjutan', source:'Jurnal Pendidikan Terapan, Vol. 14', date:'12 Mei 2026', snippet:'Tinjauan ini merangkum temuan dari berbagai studi terkait efektivitas pembelajaran daring.', content:'Tinjauan literatur ini merangkum sejumlah studi terkait efektivitas pembelajaran daring pada jenjang pendidikan tinggi, termasuk faktor keterlibatan dan retensi materi.'},
+];
+MOCK_DATA.forEach(d => d.img = `https://picsum.photos/seed/${d.seed}/720/540`);
+
+let selectedCard = null;
+
+// ---------- Chip input (keyword) ----------
+function setupChipInput(inputId, wrapId){
+  const input = document.getElementById(inputId);
+  const wrap = document.getElementById(wrapId);
+  input.addEventListener('keydown', e=>{
+    if(e.key === 'Enter' && input.value.trim()){
+      e.preventDefault();
+      const chip = document.createElement('span');
+      chip.className = 'chip';
+      chip.innerHTML = `${escapeHtml(input.value.trim())} <button type="button" aria-label="hapus">×</button>`;
+      chip.querySelector('button').addEventListener('click', ()=> chip.remove());
+      wrap.insertBefore(chip, input);
+      input.value = '';
+    }
+  });
+}
+function escapeHtml(str){
+  return str.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+setupChipInput('kwPrimaryInput','kwPrimaryWrap');
+setupChipInput('kwSecondaryInput','kwSecondaryWrap');
+
+// ---------- Accordion ----------
+document.querySelectorAll('[data-accordion]').forEach(item=>{
+  item.querySelector('.accordion-trigger').addEventListener('click', ()=>{
+    item.classList.toggle('open');
+  });
+});
+
+// ---------- Content type filters ----------
+const filterSemua = document.getElementById('filterSemua');
+const typeFilters = document.querySelectorAll('.type-filter');
+filterSemua.addEventListener('change', ()=>{
+  typeFilters.forEach(cb => cb.checked = filterSemua.checked);
+  renderResults();
+});
+typeFilters.forEach(cb=>{
+  cb.addEventListener('change', ()=>{
+    filterSemua.checked = Array.from(typeFilters).every(c=>c.checked);
+    renderResults();
+  });
+});
+
+// ---------- Date filter ----------
+const dateStart = document.getElementById('dateStart');
+const dateEnd = document.getElementById('dateEnd');
+const datePlaceholder = document.getElementById('datePlaceholder');
+function updateDatePlaceholder(){
+  if(dateStart.value && dateEnd.value){
+    datePlaceholder.textContent = `${dateStart.value} → ${dateEnd.value}`;
+  } else {
+    datePlaceholder.textContent = '— pilih rentang tanggal —';
+  }
+}
+dateStart.addEventListener('change', updateDatePlaceholder);
+dateEnd.addEventListener('change', updateDatePlaceholder);
+document.getElementById('clearDateBtn').addEventListener('click', ()=>{
+  dateStart.value = ''; dateEnd.value = ''; updateDatePlaceholder();
+});
+
+// ---------- Crawl simulation ----------
+let hasCrawled = false;
+const crawlBtn = document.getElementById('crawlBtn');
+const crawlLabel = document.getElementById('crawlLabel');
+const engineStatus = document.getElementById('engineStatus');
+const engineLabel = document.getElementById('engineLabel');
+const crawlProgressRoot = document.getElementById('crawlProgressRoot');
+const crawlProgressIndicator = document.getElementById('crawlProgressIndicator');
+
+crawlBtn.addEventListener('click', ()=>{
+  crawlBtn.disabled = true;
+  crawlBtn.classList.add('loading');
+  crawlLabel.textContent = 'Crawling...';
+  engineStatus.classList.add('busy');
+  engineLabel.textContent = 'CRAWLING...';
+
+  // Start Progress Animation
+  crawlProgressRoot.classList.add('show');
+  let progressValue = 0;
+  crawlProgressIndicator.style.transform = `translateX(-${100 - progressValue}%)`;
+  
+  const progressInterval = setInterval(() => {
+    // slowly increment up to 85%
+    if (progressValue < 85) {
+      progressValue += Math.random() * 10;
+      if (progressValue > 85) progressValue = 85;
+      crawlProgressIndicator.style.transform = `translateX(-${100 - progressValue}%)`;
+    }
+  }, 300);
+
+  const primaryKwChips = Array.from(document.querySelectorAll('#kwPrimaryWrap .chip')).map(c => c.textContent.replace('×', '').trim());
+  const secondaryKwChips = Array.from(document.querySelectorAll('#kwSecondaryWrap .chip')).map(c => c.textContent.replace('×', '').trim());
+  const keywords = [...primaryKwChips, ...secondaryKwChips];
+
+  // Make an API request to the backend
+  fetch('/api/crawl', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ keywords })
+  })
+  .then(res => res.json())
+  .then(data => {
+    data.forEach(d => d.img = `https://picsum.photos/seed/${d.seed}/720/540`);
+    MOCK_DATA.length = 0; // Clear old array
+    MOCK_DATA.push(...data); // Populate with new results
+    hasCrawled = true;
+    renderResults();
+  })
+  .catch(err => {
+    console.error('Error crawling:', err);
+    alert('Terjadi kesalahan saat melakukan crawling!');
+  })
+  .finally(() => {
+    // Complete progress animation
+    clearInterval(progressInterval);
+    progressValue = 100;
+    crawlProgressIndicator.style.transform = `translateX(-${100 - progressValue}%)`;
+    
+    setTimeout(() => {
+      crawlProgressRoot.classList.remove('show');
+      crawlBtn.disabled = false;
+      crawlBtn.classList.remove('loading');
+      crawlLabel.textContent = 'Mulai Crawling';
+      engineStatus.classList.remove('busy');
+      engineLabel.textContent = 'ENGINE READY';
+    }, 400); // Wait a moment so user sees it reached 100%
+  });
+});
+
+function getActiveTypes(){
+  return Array.from(typeFilters).filter(cb=>cb.checked).map(cb=>cb.dataset.type);
+}
+
+function renderResults(){
+  const list = document.getElementById('resultsList');
+  const downloadBtn = document.getElementById('downloadBtn');
+  const activeTypes = getActiveTypes();
+
+  if(!hasCrawled || MOCK_DATA.length === 0){
+    document.getElementById('statTotal').textContent = '0';
+    document.getElementById('statBerita').textContent = '0';
+    document.getElementById('statJurnal').textContent = '0';
+    document.getElementById('statVideo').textContent = '0';
+    document.getElementById('countSemua').textContent = '0';
+    document.getElementById('countBerita').textContent = '0';
+    document.getElementById('countJurnal').textContent = '0';
+    document.getElementById('countVideo').textContent = '0';
+    downloadBtn.disabled = true;
+    list.innerHTML = `<div class="empty-state"><span class="spider">🕸️</span><h3>Tidak ada hasil</h3><p>Coba ubah filter tipe konten atau lakukan pencarian ulang.</p></div>`;
+    return;
+  }
+
+  downloadBtn.disabled = false;
+  const filtered = MOCK_DATA.filter(item => activeTypes.includes(item.type));
+  const totalBerita = MOCK_DATA.filter(i=>i.type==='berita').length;
+  const totalJurnal = MOCK_DATA.filter(i=>i.type==='jurnal').length;
+  const totalVideo = MOCK_DATA.filter(i=>i.type==='video').length;
+
+  document.getElementById('statTotal').textContent = filtered.length;
+  document.getElementById('statBerita').textContent = filtered.filter(i=>i.type==='berita').length;
+  document.getElementById('statJurnal').textContent = filtered.filter(i=>i.type==='jurnal').length;
+  document.getElementById('statVideo').textContent = filtered.filter(i=>i.type==='video').length;
+  document.getElementById('countSemua').textContent = MOCK_DATA.length;
+  document.getElementById('countBerita').textContent = totalBerita;
+  document.getElementById('countJurnal').textContent = totalJurnal;
+  document.getElementById('countVideo').textContent = totalVideo;
+
+  list.innerHTML = '';
+  if(filtered.length === 0){
+    list.innerHTML = `<div class="empty-state"><span class="spider">🕸️</span><h3>Tidak ada hasil</h3><p>Coba ubah filter tipe konten.</p></div>`;
+    return;
+  }
+
+  filtered.forEach((item)=>{
+    const card = document.createElement('div');
+    card.className = 'result-card pressable';
+    card.innerHTML = `
+      <div class="thumb-wrap">
+        <div class="skeleton"></div>
+        <img loading="lazy" alt="thumbnail ${escapeHtml(item.title)}" src="${item.img}" onload="this.classList.add('loaded')">
+        <span class="thumb-scrap-tag">scraped image</span>
+      </div>
+      <div class="result-card-body">
+        <span class="tag ${item.type}">${item.type}</span>
+        <h3>${escapeHtml(item.title)}</h3>
+        <div class="result-meta">${item.source} · ${item.date}</div>
+        <p>${escapeHtml(item.snippet)}</p>
+      </div>
+    `;
+    card.addEventListener('click', ()=> openPreview(item, card));
+    list.appendChild(card);
+  });
+}
+
+// ---------- Preview panel ----------
+const previewPanel = document.getElementById('previewPanel');
+const previewEmpty = document.getElementById('previewEmpty');
+const previewBody = document.getElementById('previewBody');
+const previewBackdrop = document.getElementById('previewBackdrop');
+
+function openPreview(item, cardEl){
+  if(selectedCard) selectedCard.classList.remove('active');
+  selectedCard = cardEl;
+  cardEl.classList.add('active');
+
+  previewEmpty.style.display = 'none';
+  previewBody.style.display = 'block';
+  previewBody.innerHTML = `
+    <div class="preview-hero">
+      <div class="skeleton"></div>
+      <img alt="thumbnail ${escapeHtml(item.title)}" src="${item.img}" onload="this.classList.add('loaded')">
+    </div>
+    <div class="preview-body" style="padding:16px;">
+      <span class="tag ${item.type}">${item.type}</span>
+      <h3>${escapeHtml(item.title)}</h3>
+      <div class="preview-meta">${item.source} · ${item.date}</div>
+      <div class="preview-divider"></div>
+      <p>${escapeHtml(item.content)}</p>
+      <a href="#" class="btn-secondary pressable" onclick="return false;">Buka berita asli ↗</a>
+    </div>
+  `;
+
+  if(window.innerWidth <= 1080){
+    previewPanel.classList.add('open');
+    previewBackdrop.classList.add('show');
+  }
+}
+
+document.getElementById('closePreviewBtn').addEventListener('click', closePreview);
+previewBackdrop.addEventListener('click', closePreview);
+function closePreview(){
+  previewPanel.classList.remove('open');
+  previewBackdrop.classList.remove('show');
+}
+
+// ---------- Mobile sidebar drawer ----------
+const sidebar = document.getElementById('sidebar');
+const sidebarBackdrop = document.getElementById('sidebarBackdrop');
+document.getElementById('openSidebarBtn').addEventListener('click', ()=>{
+  sidebar.classList.add('open');
+  sidebarBackdrop.classList.add('show');
+});
+function closeSidebar(){
+  sidebar.classList.remove('open');
+  sidebarBackdrop.classList.remove('show');
+}
+document.getElementById('closeSidebarBtn').addEventListener('click', closeSidebar);
+sidebarBackdrop.addEventListener('click', closeSidebar);
+
+// ---------- Theme Switch ----------
+const themeSwitch = document.getElementById('themeSwitch');
+themeSwitch.addEventListener('click', () => {
+  themeSwitch.classList.toggle('checked');
+  if (themeSwitch.classList.contains('checked')) {
+    document.documentElement.classList.add('dark');
+  } else {
+    document.documentElement.classList.remove('dark');
+  }
+});
+
+// ---------- Download Feature ----------
+function downloadData() {
+  if (!hasCrawled || MOCK_DATA.length === 0) return;
+  const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(MOCK_DATA, null, 2));
+  const downloadAnchorNode = document.createElement('a');
+  downloadAnchorNode.setAttribute("href", dataStr);
+  downloadAnchorNode.setAttribute("download", "crawling_results.json");
+  document.body.appendChild(downloadAnchorNode); // required for firefox
+  downloadAnchorNode.click();
+  downloadAnchorNode.remove();
+}
+
+document.getElementById('downloadBtn').addEventListener('click', downloadData);
+
+// Keyboard Shortcuts Listener
+window.addEventListener('keydown', (e) => {
+  // Check for Ctrl+J (Win/Linux) OR Cmd+Option+L (Mac)
+  if ((e.ctrlKey && e.code === 'KeyJ') || (e.metaKey && e.altKey && e.code === 'KeyL')) {
+    e.preventDefault();
+    if (hasCrawled && MOCK_DATA.length > 0) {
+      downloadData();
+    }
+  }
+});
+</script>
+</body>
+</html>
