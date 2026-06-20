@@ -317,6 +317,69 @@
     transform: translateX(-100%);
   }
 
+  /* ---------- Pagination (Neobrutalism) ---------- */
+  .pagination-root {
+    display: none;
+    justify-content: center;
+    align-items: center;
+    gap: 6px;
+    margin-top: 20px;
+    flex-wrap: wrap;
+  }
+  .pagination-root.show {
+    display: flex;
+  }
+  .pg-btn {
+    min-width: 38px; height: 38px;
+    border: var(--bw) solid var(--border);
+    border-radius: var(--radius-base);
+    background: var(--secondary-background);
+    color: var(--foreground);
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700; font-size: 14px;
+    box-shadow: var(--shadow);
+    cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center;
+    gap: 5px;
+    padding: 0 10px;
+    transition: all .2s cubic-bezier(0.34,1.56,0.64,1);
+    text-decoration: none;
+  }
+  .pg-btn:hover:not(:disabled):not(.active) {
+    transform: translate(-2px,-2px);
+    box-shadow: 5px 5px 0px 0px var(--border);
+  }
+  .pg-btn:active:not(:disabled) {
+    transform: translate(3px,3px);
+    box-shadow: none;
+  }
+  .pg-btn.active {
+    background: var(--foreground);
+    color: var(--background);
+    cursor: default;
+    box-shadow: none;
+  }
+  html.dark .pg-btn.active {
+    background: var(--main);
+    color: var(--background);
+  }
+  .pg-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    box-shadow: none;
+    transform: none;
+  }
+  .pg-ellipsis {
+    width: 38px; height: 38px;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 14px; color: var(--text-muted);
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .pg-info {
+    font-size: 11.5px; color: var(--text-muted); font-family: 'JetBrains Mono', monospace;
+    text-align: center; margin-top: 8px;
+  }
+
   /* ---------- Switch (Neobrutalism) ---------- */
   .theme-switch {
     display: inline-flex;
@@ -489,6 +552,12 @@
         <p>Masukkan keyword lalu klik "Mulai Crawling" untuk mulai mengambil data.</p>
       </div>
     </div>
+
+    <!-- PAGINATION -->
+    <nav class="pagination-root" id="paginationRoot" role="navigation" aria-label="pagination">
+      <!-- rendered by JS -->
+    </nav>
+    <div class="pg-info" id="pgInfo"></div>
   </main>
 
   <!-- PREVIEW -->
@@ -653,8 +722,93 @@ crawlBtn.addEventListener('click', ()=>{
   });
 });
 
+// ---------- Pagination state ----------
+const ITEMS_PER_PAGE = 9;
+let currentPage = 1;
+
 function getActiveTypes(){
   return Array.from(typeFilters).filter(cb=>cb.checked).map(cb=>cb.dataset.type);
+}
+
+function renderPagination(totalItems) {
+  const paginationRoot = document.getElementById('paginationRoot');
+  const pgInfo = document.getElementById('pgInfo');
+  const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
+
+  if (totalPages <= 1) {
+    paginationRoot.classList.remove('show');
+    pgInfo.textContent = '';
+    return;
+  }
+
+  paginationRoot.classList.add('show');
+  paginationRoot.innerHTML = '';
+
+  // Helper: create page button
+  function makeBtn(label, page, isActive = false, isDisabled = false, isEllipsis = false) {
+    if (isEllipsis) {
+      const span = document.createElement('span');
+      span.className = 'pg-ellipsis';
+      span.textContent = '···';
+      return span;
+    }
+    const btn = document.createElement('button');
+    btn.className = 'pg-btn' + (isActive ? ' active' : '');
+    btn.disabled = isDisabled;
+    btn.innerHTML = label;
+    btn.setAttribute('aria-label', typeof page === 'number' ? `Halaman ${page}` : label);
+    if (!isActive && !isDisabled && typeof page === 'number') {
+      btn.addEventListener('click', () => {
+        currentPage = page;
+        renderResults();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+    }
+    return btn;
+  }
+
+  // Prev button
+  const prevBtn = makeBtn(
+    `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg> Prev`,
+    currentPage - 1, false, currentPage === 1
+  );
+  if (currentPage > 1) prevBtn.addEventListener('click', () => { currentPage--; renderResults(); window.scrollTo({top:0,behavior:'smooth'}); });
+  paginationRoot.appendChild(prevBtn);
+
+  // Page numbers with ellipsis logic
+  const pages = [];
+  if (totalPages <= 7) {
+    for (let i = 1; i <= totalPages; i++) pages.push(i);
+  } else {
+    if (currentPage <= 4) {
+      pages.push(1,2,3,4,5,'…',totalPages);
+    } else if (currentPage >= totalPages - 3) {
+      pages.push(1,'…',totalPages-4,totalPages-3,totalPages-2,totalPages-1,totalPages);
+    } else {
+      pages.push(1,'…',currentPage-1,currentPage,currentPage+1,'…',totalPages);
+    }
+  }
+
+  pages.forEach(p => {
+    if (p === '…') {
+      paginationRoot.appendChild(makeBtn(null, null, false, false, true));
+    } else {
+      paginationRoot.appendChild(makeBtn(p, p, p === currentPage));
+    }
+  });
+
+  // Next button
+  const nextBtn = makeBtn(
+    `Next <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>`,
+    currentPage + 1, false, currentPage === totalPages
+  );
+  if (currentPage < totalPages) nextBtn.addEventListener('click', () => { currentPage++; renderResults(); window.scrollTo({top:0,behavior:'smooth'}); });
+  paginationRoot.appendChild(nextBtn);
+
+  // Info text
+  const start = (currentPage - 1) * ITEMS_PER_PAGE + 1;
+  const end = Math.min(currentPage * ITEMS_PER_PAGE, totalItems);
+  pgInfo.textContent = `Menampilkan ${start}–${end} dari ${totalItems} hasil · Halaman ${currentPage} / ${totalPages}`;
 }
 
 function renderResults(){
@@ -691,13 +845,24 @@ function renderResults(){
   document.getElementById('countJurnal').textContent = totalJurnal;
   document.getElementById('countVideo').textContent = totalVideo;
 
+  // Reset page if filter changed and current page exceeds total pages
+  const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
+  if (currentPage > totalPages) currentPage = 1;
+
   list.innerHTML = '';
   if(filtered.length === 0){
     list.innerHTML = `<div class="empty-state"><span class="spider">🕸️</span><h3>Tidak ada hasil</h3><p>Coba ubah filter tipe konten.</p></div>`;
+    renderPagination(0);
     return;
   }
 
-  filtered.forEach((item)=>{
+  renderPagination(filtered.length);
+
+  // Slice for current page
+  const start = (currentPage - 1) * ITEMS_PER_PAGE;
+  const paginated = filtered.slice(start, start + ITEMS_PER_PAGE);
+
+  paginated.forEach((item)=>{
     const card = document.createElement('div');
     card.className = 'result-card pressable';
     card.innerHTML = `
